@@ -1,0 +1,398 @@
+1) Dockerfile
+
+Create Dockerfile in the repo root.
+
+# Dockerfile for Wisecow (simple shell-based web server)
+FROM debian:12-slim
+
+# Install runtime deps required by wisecow.sh
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      bash curl netcat-openbsd fortune-mod cowsay && \
+    rm -rf /var/lib/apt/lists/*
+
+# Add app
+WORKDIR /app
+COPY wisecow.sh /app/wisecow.sh
+RUN chmod +x /app/wisecow.sh
+
+# Expose the port the script uses (default 4499 per README)
+EXPOSE 4499
+
+# Run the script in foreground
+CMD ["./wisecow.sh"]
+
+
+Notes:
+
+I used netcat-openbsd in case the script uses nc to serve; if the script uses a different method, adjust packages accordingly.
+
+If you prefer a smaller base image (alpine), you can adapt packages; Debian is easiest for fortune-mod/cowsay.
+
+2) Kubernetes manifests
+
+Create a folder k8s/ and add these files.
+
+k8s/namespace.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: wisecow
+
+k8s/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wisecow
+  namespace: wisecow
+  labels:
+    app: wisecow
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wisecow
+  template:
+    metadata:
+      labels:
+        app: wisecow
+    spec:
+      containers:
+        - name: wisecow
+          image: ghcr.io/${{GITHUB_REPOSITORY_OWNER}}/wisecow:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 4499
+          livenessProbe:
+            tcpSocket:
+              port: 4499
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            tcpSocket:
+              port: 4499
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+
+In CI/CD you’ll replace the image with the real image name (the Actions workflow below sets tags and pushes). On local testing you can set image to your-dockerhub-or-ghcr-image:tag.
+
+k8s/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: wisecow
+  namespace: wisecow
+  labels:
+    app: wisecow
+spec:
+  ports:
+    - port: 80
+      targetPort: 4499
+      protocol: TCP
+      name: http
+  selector:
+    app: wisecow
+  type: ClusterIP
+
+
+This exposes the app inside cluster on port 80 and forwards to container port 4499.
+
+k8s/ingress.yaml (Ingress + TLS annotation for cert-manager)
+
+This example uses nginx ingress controller and cert-manager to provision TLS automatically. For local dev you may use a self-signed issuer or mkcert (instructions below).
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: wisecow-ingress
+  namespace: wisecow
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "wisecow-selfsigned"  # change to your issuer
+spec:
+  tls:
+    - hosts:
+        - wisecow.local
+      secretName: wisecow-tls
+  rules:
+    - host: wisecow.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: wisecow
+                port:
+                  number: 80
+
+
+Notes:
+
+Use wisecow.local (or your own domain). For Minikube, add an /etc/hosts entry pointing that host to the minikube IP, or use minikube addons ingress-dns / ingress to route.
+
+The cert-manager annotation expects an Issuer or ClusterIssuer named wisecow-selfsigned (below I include a self-signed ClusterIssuer + Certificate that will create the secret wisecow-tls).
+
+k8s/cert-manager-selfsigned.yaml (for local/dev)
+
+Only for local or dev clusters. On production use Let's Encrypt ClusterIssuer with HTTP-01 / DNS-01.
+
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: wisecow-selfsigned
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wisecow-cert
+  namespace: wisecow
+spec:
+  dnsNames:
+    - wisecow.local
+  secretName: wisecow-tls
+  issuerRef:
+    name: wisecow-selfsigned
+    kind: ClusterIssuer
+
+
+If you prefer the cert-manager CA flow (issue a CA cert) or real Let's Encrypt, replace selfSigned with acme config. See cert-manager docs. 
+cert-manager
+
+3) GitHub Actions workflow
+
+Create .github/workflows/ci-cd.yml.
+
+This workflow:
+
+Builds the image using Docker
+
+Tags & pushes to GHCR (ghcr.io/${{ github.repository_owner }}/wisecow:sha-<short>)
+
+Optionally deploys to your Kubernetes cluster using kubectl (requires KUBE_CONFIG secret containing base64 kubeconfig or a GitHub secret that allows the runner to access the cluster).
+
+name: CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/wisecow
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.publish.outputs.image }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU (for cross-build)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          # For GHCR, use a PAT with write:packages (or GITHUB_TOKEN for public repos, or a personal PAT)
+          password: ${{ secrets.GHCR_PAT }}
+
+      - name: Build and push
+        id: publish
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
+        env:
+          # optional build arg if needed
+          # BUILD_DATE: ${{ steps.date.outputs.date }}
+        # output the image name for later jobs
+      - name: Set output image
+        run: echo "image=${{ env.IMAGE_NAME }}:sha-${{ github.sha }}" >> $GITHUB_OUTPUT
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: ${{ secrets.KUBE_CONFIG != '' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'latest'
+
+      - name: Configure kubeconfig
+        env:
+          KUBECONFIG_DATA: ${{ secrets.KUBE_CONFIG }}
+        run: |
+          echo "$KUBECONFIG_DATA" | base64 --decode > $HOME/.kube/config
+          kubectl config view
+
+      - name: Deploy manifests (apply)
+        run: |
+          # replace image in deployment manifest and apply
+          kubectl apply -f k8s/namespace.yaml
+          # set image on deployment and apply other manifests
+          kubectl -n wisecow set image deployment/wisecow wisecow=${{ env.IMAGE_NAME }}:sha-${{ github.sha }} --record || true
+          kubectl apply -f k8s/deployment.yaml -n wisecow || true
+          kubectl apply -f k8s/service.yaml -n wisecow || true
+          kubectl apply -f k8s/cert-manager-selfsigned.yaml || true
+          kubectl apply -f k8s/ingress.yaml -n wisecow || true
+
+
+
+Secrets required in the repository settings:
+
+GHCR_PAT — a GitHub Personal Access Token with write:packages (or you can use GITHUB_TOKEN in public repos, but GHCR push cross-repo sometimes needs a PAT). Use secrets.GHCR_PAT.
+
+KUBE_CONFIG — base64 encoded kubeconfig file (if you want Actions to deploy to your cluster automatically). If you prefer, create separate secrets for cloud provider auth or use kubectl login steps.
+
+To create: cat ~/.kube/config | base64 | tr -d '\n' then paste into repository secret.
+
+If you use Docker Hub instead of GHCR, replace login/push steps and provide DOCKERHUB_USERNAME/DOCKERHUB_PASSWORD.
+
+Notes about deployment step:
+
+The workflow tries to set the image on the wisecow Deployment using kubectl set image. This is a simple approach. You can also use kubectl apply with updated manifest containing exact image tag.
+
+References for patterns & options (docs/guides showing common recipes). 
+Medium
++1
+
+4) TLS options & local cluster tips
+Recommended for local dev (Minikube / Kind)
+
+Minikube:
+
+Start minikube and enable ingress addon:
+
+minikube start
+minikube addons enable ingress
+
+
+(Ingress addon docs). 
+Kubernetes
+
+Either:
+
+Use mkcert to generate a certificate for wisecow.local and configure the ingress controller to use it; OR
+
+Install cert-manager and use a self-signed ClusterIssuer (manifest above) to create TLS secret; OR
+
+Use Let's Encrypt Staging via cert-manager ACME if you have a real DNS domain.
+
+Install cert-manager (dev flow):
+
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.18.2/cert-manager.yaml
+
+
+(see cert-manager docs for the latest stable release). 
+cert-manager
+
+Host / DNS:
+
+For wisecow.local add to /etc/hosts the IP of minikube or kind node:
+
+echo "$(minikube ip) wisecow.local" | sudo tee -a /etc/hosts
+
+
+Or use minikube addons enable ingress-dns to handle DNS inside minikube. 
+minikube
+
+mkcert (local trusted cert):
+
+mkcert -install
+
+mkcert wisecow.local
+
+Create Kubernetes TLS secret:
+
+kubectl create secret tls wisecow-tls --cert=wisecow.local.pem --key=wisecow.local-key.pem -n wisecow
+
+
+Then Ingress will use wisecow-tls.
+
+Production / real domain
+
+Use cert-manager with an ACME ClusterIssuer configured for Let's Encrypt (http-01 or dns-01) instead of the self-signed issuer. cert-manager docs explain this in detail. 
+cert-manager
+
+5) How to run & test locally (quick start)
+
+Clone repo:
+
+git clone https://github.com/nyrahul/wisecow.git
+cd wisecow
+
+
+Build & test Docker image locally:
+
+docker build -t local/wisecow:dev .
+docker run -p 4499:4499 local/wisecow:dev
+# then visit http://localhost:4499
+
+
+On Minikube:
+
+minikube start
+minikube addons enable ingress
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+# create an image and push to a registry accessible by cluster (e.g., GHCR or Docker Hub),
+# then update image in k8s/deployment.yaml accordingly and apply
+
+
+If you want Actions to auto-deploy, add the GHCR_PAT & KUBE_CONFIG secrets to the repo, then push to main.
+
+6) Security & access control notes
+
+Keep GHCR_PAT secure. For GitHub Container Registry you can grant minimal scopes (read:packages/write:packages).
+
+The KUBE_CONFIG secret gives the runner access to your cluster — only enable in trusted repositories / organizations.
+
+For production TLS, prefer Let's Encrypt via cert-manager ACME rather than self-signed certs.
+
+7) Files summary (what to add to the repo)
+Dockerfile
+k8s/
+  namespace.yaml
+  deployment.yaml
+  service.yaml
+  ingress.yaml
+  cert-manager-selfsigned.yaml
+.github/workflows/ci-cd.yml
+(wisecow.sh is already in repo)
+README.md (add instructions)
+
+8) Helpful references / docs
+
+Wisecow repo (your app). 
+GitHub
+
+cert-manager installation & docs (useful for TLS automation). 
+cert-manager
+
+Minikube Ingress enable / how to expose ingress locally. 
+Kubernetes
+
+Examples & guides for CI -> k8s deploy with GitHub Actions. 
+Spacelift
++1
