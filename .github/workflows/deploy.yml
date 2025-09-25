@@ -1,0 +1,37 @@
+name: CI/CD to VM
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push Docker image
+        run: |
+          docker build -t vinayt05/wisecow-app:latest .
+          docker push vinayt05/wisecow-app:latest
+
+      - name: Deploy on VM via SSH
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          script: |
+            kubectl apply -f /home/ubuntu/deployment.yaml
+            kubectl apply -f /home/ubuntu/service.yaml
+            kubectl apply -f /home/ubuntu/clusterissuer.yaml
+            kubectl apply -f /home/ubuntu/ingress.yaml
