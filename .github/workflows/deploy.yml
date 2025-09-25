@@ -32,11 +32,12 @@ jobs:
           key: ${{ secrets.VM_SSH_KEY }}
           port: 22
           source: |
-            deployment.yaml
-            service.yaml
-            clusterissuer.yaml
-            ingress.yaml
+            wisecow/deployment.yaml
+            wisecow/service.yaml
+            wisecow/clusterissuer.yaml
+            wisecow/ingress.yaml
           target: /home/ubuntu/
+
 
       - name: Deploy on VM via SSH
         uses: appleboy/ssh-action@v0.1.8
