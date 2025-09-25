@@ -1,0 +1,36 @@
+apiVersion: kubearmor.com/v1
+kind: KubeArmorPolicy
+metadata:
+  name: wisecow-restrictive
+  namespace: wisecow
+spec:
+  severity: high
+  message: "Restricting excessive access for wisecow pods"
+  selector:
+    matchLabels:
+      app: wisecow
+  file:
+    matchPaths:
+      - path: /etc
+        severity: high
+        action: Block
+      - path: /var/run/docker.sock
+        action: Block
+  process:
+    matchPaths:
+      - path: /usr/bin*
+        action: Audit
+    matchPathsNot:
+      - path: /usr/bin/node
+        action: Allow
+  network:
+    matchProtocols:
+      - protocol: tcp
+        dstPorts:
+          - 443
+          - 80
+  capabilities:
+    allowedCapabilities:
+      - CHOWN
+    blockedCapabilities:
+      - NET_RAW
