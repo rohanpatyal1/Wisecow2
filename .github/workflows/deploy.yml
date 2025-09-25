@@ -11,10 +11,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4  # Updated to v4
+        uses: actions/checkout@v4
 
       - name: Log in to Docker Hub
-        uses: docker/login-action@v3  # Updated to v3
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
@@ -23,22 +23,23 @@ jobs:
         run: |
           docker build -t vinayt05/wisecow-app:latest .
           docker push vinayt05/wisecow-app:latest
-      
+
       - name: Copy manifests to VM
-        uses: appleboy/scp-action@v0.1.7  # Updated version
+        uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VM_HOST }}
-          username: ${{ secrets.VM_USER }}  # Should be "azureuser"
+          username: azureuser
           key: ${{ secrets.VM_SSH_KEY }}
           port: 22
-          source: "wisecow/deployment.yaml,wisecow/service.yaml,wisecow/clusterissuer.yaml,wisecow/ingress.yaml"
-          target: "/home/azureuser/"  # Match username
-      
+          source: "wisecow/deployment.yaml wisecow/service.yaml wisecow/clusterissuer.yaml wisecow/ingress.yaml"
+          target: "/home/azureuser/"
+          strip_components: 1
+          
       - name: Deploy on VM via SSH
-        uses: appleboy/ssh-action@v0.1.7  # Updated version
+        uses: appleboy/ssh-action@v0.1.7
         with:
           host: ${{ secrets.VM_HOST }}
-          username: ${{ secrets.VM_USER }}  # Should be "azureuser"
+          username: azureuser
           key: ${{ secrets.VM_SSH_KEY }}
           script: |
             kubectl apply -f /home/azureuser/deployment.yaml
