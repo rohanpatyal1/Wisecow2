@@ -26,3 +26,30 @@ Deploy the wisecow application as a k8s app
 1. Github repo containing the app with corresponding dockerfile, k8s manifest, any other artifacts needed.
 2. Github repo with corresponding github action.
 3. Github repo should be kept private and the access should be enabled for following github IDs: nyrahul
+
+# quick run and deploy steps
+1.Build.
+docker build -t ghcr.io/<GH_USER>/wisecow:latest .
+docker push ghcr.io/<GH_USER>/wisecow:latest
+
+2.Minikube / Kind
+Create namespace & apply manifests:
+
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+kubectl apply -f k8s/ingress.yaml
+If using Minikube and testing ingress:
+minikube addons enable ingress
+
+# then port-forward or use minikube tunnel for LoadBalancer
+3.Set up GitHub Actions
+Commit the workflow .github/workflows/ci-cd.yml
+Add secret KUBECONFIG (paste kubeconfig)
+When you push to main, workflow will build, push image, then apply manifests
+
+4.TLS
+For production, install cert-manager and create a ClusterIssuer for Let's Encrypt:
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/<version>/cert-manager.yaml
+Create ClusterIssuer resource (ACME staging/production).
+Annotate ingress with cert-manager.io/cluster-issuer: "letsencrypt"
