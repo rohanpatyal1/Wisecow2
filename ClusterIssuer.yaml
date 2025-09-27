@@ -4,16 +4,11 @@ metadata:
   name: letsencrypt
 spec:
   acme:
-    email: vinaysinghtilada@gmail.com
     server: https://acme-v02.api.letsencrypt.org/directory
+    email: vinaysinghtilada@gmail.com
     privateKeySecretRef:
       name: letsencrypt-account-key
     solvers:
-    - dns01:
-        cloudflare:
-          apiTokenSecretRef:
-            name: cloudflare-api-token-secret
-            key: api-token
-      selector:
-        dnsZones:
-        - bestinthebizz.in
+    - http01:
+        ingress:
+          class: nginx

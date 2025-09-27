@@ -11,7 +11,7 @@ spec:
   tls:
     - hosts:
         - vinay-tilada.bestinthebizz.in
-      secretName: wisecow-tls  # cert-manager will create this
+      secretName: wisecow-tls  
   rules:
     - host: vinay-tilada.bestinthebizz.in
       http:
