@@ -4,14 +4,14 @@ metadata:
   name: letsencrypt
 spec:
   acme:
-    email: vinaysinghtilada@gmail.com
+    email: vinaysinghtilada@gmail.com          # Your email
     server: https://acme-v02.api.letsencrypt.org/directory
     privateKeySecretRef:
-      name: letsencrypt-account-key
+      name: letsencrypt-account-key            # Secret to store ACME private key
     solvers:
-    - dns01:
-        cloudflare:
-          email: vinaysinghtilada@gmail.com
-          apiTokenSecretRef:
-            name: cloudflare-api-token-secret
-            key: api-token
+      - dns01:
+          cloudflare:
+            email: vinaysinghtilada@gmail.com
+            apiTokenSecretRef:
+              name: cloudflare-api-token-secret   # Secret containing API token
+              key: api-token
