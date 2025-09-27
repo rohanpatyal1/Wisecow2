@@ -11,18 +11,11 @@ spec:
   tls:
     - hosts:
         - vinay-tilada.bestinthebizz.in
-      secretName: wisecow-tls  # cert-manager will create this
+      secretName: wisecow-tls  
   rules:
     - host: vinay-tilada.bestinthebizz.in
       http:
         paths:
-          - path: /.well-known/acme-challenge/
-            pathType: Prefix
-            backend:
-              service:
-                name: cm-acme-http-solver-mk9jc   # cert-manager solver service
-                port:
-                  number: 8089
           - path: /
             pathType: Prefix
             backend:
