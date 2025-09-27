@@ -57,12 +57,19 @@ jobs:
           key: ${{ secrets.VM_SSH_KEY }}
           script: |
             set -e
+            # Create namespace if it doesn't exist
             kubectl apply -f /home/azureuser/k8s/namespace.yaml || true
+
             kubectl apply -f /home/azureuser/k8s/ClusterIssuer.yaml || true
+
             kubectl apply -f /home/azureuser/k8s/service.yaml
-            kubectl apply -f /home/azureuser/k8s/tls-secret.yaml
             kubectl apply -f /home/azureuser/k8s/deployment.yaml
+
             kubectl apply -f /home/azureuser/k8s/ingress-nginx-controller.yaml --wait
+
+            # Deploy ingress with cert-manager annotations for TLS
             kubectl apply -f /home/azureuser/k8s/ingress.yaml --wait
 
-
+            # Wait for cert-manager to create TLS secret
+            echo "Waiting for TLS certificate to be ready..."
+            kubectl wait --for=condition=Ready certificate/wisecow-tls -n wisecow --timeout=300s || true
