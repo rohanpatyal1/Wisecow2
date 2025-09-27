@@ -20,4 +20,4 @@ spec:
           image: vinayt05/wisecow-app:latest
           ports:
             - containerPort: 4499
-          imagePullPolicy: Always
+          command: ["/bin/bash", "/wisecow.sh"]
