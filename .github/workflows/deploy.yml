@@ -57,9 +57,10 @@ jobs:
           key: ${{ secrets.VM_SSH_KEY }}
           script: |
             set -e
-            # Apply manifests in correct order
             kubectl apply -f /home/azureuser/k8s/namespace.yaml || true
             kubectl apply -f /home/azureuser/k8s/ClusterIssuer.yaml || true
             kubectl apply -f /home/azureuser/k8s/service.yaml
             kubectl apply -f /home/azureuser/k8s/deployment.yaml
-            kubectl apply -f /home/azureuser/k8s/ingress.yaml
+            kubectl apply -f /home/azureuser/k8s/ingress-nginx-nodeport.yaml --wait
+            kubectl apply -f /home/azureuser/k8s/ingress.yaml --wait
+
