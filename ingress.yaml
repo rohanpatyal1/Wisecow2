@@ -15,6 +15,15 @@ spec:
     - host: vinay-tilada.bestinthebizz.in
       http:
         paths:
+          # Route ACME challenges to cert-manager solver
+          - path: /.well-known/acme-challenge/
+            pathType: Prefix
+            backend:
+              service:
+                name: ingress-nginx-controller
+                port:
+                  number: 80
+          # Route everything else to your app
           - path: /
             pathType: Prefix
             backend:
