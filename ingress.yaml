@@ -1,20 +1,25 @@
-apiVersion: cert-manager.io/v1
-kind: ClusterIssuer
+apiVersion: networking.k8s.io/v1
+kind: Ingress
 metadata:
-  name: letsencrypt
+  name: wisecow-ingress
+  namespace: wisecow
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt
 spec:
-  acme:
-    email: vinaysinghtilada@gmail.com
-    server: https://acme-v02.api.letsencrypt.org/directory
-    privateKeySecretRef:
-      name: letsencrypt-account-key
-    solvers:
-    - dns01:
-        cloudflare:
-          email: vinaysinghtilada@gmail.com
-          apiTokenSecretRef:
-            name: cloudflare-api-token-secret
-            key: api-token
-      selector:
-        dnsZones:
-        - bestinthebizz.in
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - vinay-tilada.bestinthebizz.in
+      secretName: wisecow-tls  # cert-manager will create this
+  rules:
+    - host: vinay-tilada.bestinthebizz.in
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: wisecow-service
+                port:
+                  number: 80
