@@ -1,22 +1,19 @@
-# Base image
 FROM ubuntu:22.04
 
 # Set working directory
 WORKDIR /app
 
-# Install dependencies
+# Install required packages including bash
 RUN apt-get update && \
-    apt-get install -y netcat-traditional fortune-mod cowsay && \
+    apt-get install -y bash netcat-traditional fortune-mod cowsay && \
     rm -rf /var/lib/apt/lists/*
 
-# Add script
-COPY wisecow.sh ./
+# Add /usr/games to PATH for fortune/cowsay
+ENV PATH="/usr/games:${PATH}"
 
-# Make it executable
+# Copy the script and make it executable
+COPY wisecow.sh ./
 RUN chmod +x wisecow.sh
 
-# Expose port used by the script
-EXPOSE 4499
-
-# Run the script when container starts
+# Run the script
 CMD ["./wisecow.sh"]
