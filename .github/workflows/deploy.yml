@@ -31,7 +31,7 @@ jobs:
           username: azureuser
           key: ${{ secrets.VM_SSH_KEY }}
           port: 22
-          source: "wisecow/*.yaml"
+          source: "wisecow/k8s/*.yaml"
           target: "/home/azureuser/"
 
       - name: Deploy on VM via SSH
@@ -51,7 +51,7 @@ jobs:
 
             # Apply in correct order
             kubectl apply -f /home/azureuser/namespace.yaml || true
-            kubectl apply -f /home/azureuser/clusterissuer.yaml || true
+            kubectl apply -f /home/azureuser/ClusterIssuer.yaml || true
             kubectl apply -f /home/azureuser/service.yaml
             kubectl apply -f /home/azureuser/deployment.yaml
             kubectl apply -f /home/azureuser/ingress.yaml

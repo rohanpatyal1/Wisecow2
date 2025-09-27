@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: wisecow
-          image: vinayt0/wisecow:latest
+          image: vinayt05/wisecow:latest
           ports:
             - containerPort: 4499
           readinessProbe:
