@@ -72,12 +72,12 @@ jobs:
       # 7. Issue SSL certificate using acme.sh
       - name: Issue SSL certificate
         uses: Menci/acme@v2
+        env:
+          CF_Token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         with:
-          version: v3.0.0
           domains: vinay-tilada.bestinthebizz.in
           arguments: --dns dns_cf
-          CF_Token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CF_Account_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           output-fullchain: ./fullchain.pem
           output-key: ./privkey.pem
           uninstall: false
+
