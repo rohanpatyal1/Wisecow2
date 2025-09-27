@@ -31,7 +31,7 @@ jobs:
           username: azureuser
           key: ${{ secrets.VM_SSH_KEY }}
           port: 22
-          source: "wisecow/k8s/*.yaml"
+          source: "wisecow/*yaml"
           target: "/home/azureuser/"
 
       - name: Deploy on VM via SSH
