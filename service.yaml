@@ -4,10 +4,11 @@ metadata:
   name: wisecow-service
   namespace: wisecow
 spec:
-  type: ClusterIP
+  type: NodePort       
   selector:
     app: wisecow
   ports:
     - name: http
       port: 80
       targetPort: 4499
+      nodePort: 30080 
