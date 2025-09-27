@@ -4,10 +4,10 @@ metadata:
   name: wisecow-service
   namespace: wisecow
 spec:
+  type: ClusterIP
   selector:
     app: wisecow
   ports:
-    - protocol: TCP
+    - name: http
       port: 80
       targetPort: 4499
-  type: ClusterIP

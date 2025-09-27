@@ -4,21 +4,21 @@ metadata:
   name: wisecow-ingress
   namespace: wisecow
   annotations:
-    kubernetes.io/ingress.class: "nginx"
-
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt
 spec:
   tls:
-  - hosts:
-    - vinay-tilada.bestinthebizz.in
-    secretName: wisecow-tls
+    - hosts:
+        - vinay-tilada.bestinthebizz.in
+      secretName: wisecow-tls
   rules:
-  - host: vinay-tilada.bestinthebizz.in
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: wisecow-service
-            port:
-            number: 80
+    - host: vinay-tilada.bestinthebizz.in
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: wisecow-service
+                port:
+                  number: 80

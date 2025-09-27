@@ -31,10 +31,9 @@ jobs:
           username: azureuser
           key: ${{ secrets.VM_SSH_KEY }}
           port: 22
-          source: "wisecow/deployment.yaml wisecow/service.yaml wisecow/clusterissuer.yaml wisecow/ingress.yaml"
+          source: "wisecow/*.yaml"
           target: "/home/azureuser/"
-          strip_components: 1
-          
+
       - name: Deploy on VM via SSH
         uses: appleboy/ssh-action@v0.1.7
         with:
@@ -42,7 +41,17 @@ jobs:
           username: azureuser
           key: ${{ secrets.VM_SSH_KEY }}
           script: |
-            kubectl apply -f /home/azureuser/deployment.yaml
+            set -e
+            # Optional cleanup (prevents duplicate/old YAMLs)
+            rm -f /home/azureuser/*.yaml
+
+            # Re-copy files (ensures clean state)
+            mkdir -p /home/azureuser/k8s
+            cp /home/azureuser/*.yaml /home/azureuser/k8s/
+
+            # Apply in correct order
+            kubectl apply -f /home/azureuser/namespace.yaml || true
+            kubectl apply -f /home/azureuser/clusterissuer.yaml || true
             kubectl apply -f /home/azureuser/service.yaml
-            kubectl apply -f /home/azureuser/clusterissuer.yaml
+            kubectl apply -f /home/azureuser/deployment.yaml
             kubectl apply -f /home/azureuser/ingress.yaml
