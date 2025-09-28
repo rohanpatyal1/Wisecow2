@@ -10,23 +10,23 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout repo
+      # 1️ Checkout repo
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2️⃣ Set up kubectl
+      # 2️ Set up kubectl
       - name: Set up kubectl
         uses: azure/setup-kubectl@v3
         with:
           version: 'latest'
 
-      # 3️⃣ Decode kubeconfig from secret and set KUBECONFIG
+      # 3️ Decode kubeconfig from secret and set KUBECONFIG
       - name: Configure kubeconfig
         run: |
           echo "${{ secrets.AKS_KUBECONFIG }}" | base64 --decode > kubeconfig.yaml
           export KUBECONFIG=$(pwd)/kubeconfig.yaml
 
-      # 4️⃣ Create namespaces
+      # 4️ Create namespaces
       - name: Create namespaces
         run: |
           echo "Creating wisecow namespace..."
