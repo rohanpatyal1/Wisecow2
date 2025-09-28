@@ -1,4 +1,4 @@
-name: Deploy to AKS
+name: Deploy to AKS with TLS
 
 on:
   push:
@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout repository
+      # 1. Checkout repo
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -20,33 +20,49 @@ jobs:
         with:
           version: 'latest'
 
-      # 3. Configure kubeconfig from GitHub Secrets
+      # 3. Configure kubeconfig from secret
       - name: Configure kubeconfig
         run: |
           echo "${{ secrets.AKS_KUBECONFIG }}" | base64 --decode > kubeconfig.yaml
           export KUBECONFIG=$(pwd)/kubeconfig.yaml
-          kubectl config view
 
-      # 4. Apply Kubernetes manifests
-      - name: Deploy manifests
+      # 4. Create necessary namespaces
+      - name: Create namespaces
         run: |
-          export KUBECONFIG=$(pwd)/kubeconfig.yaml
-          
-          echo "Applying namespace..."
           kubectl apply -f namespace.yaml || true
+          kubectl create namespace ingress-nginx || true
 
-          echo "Applying ClusterIssuer for TLS..."
+      # 5. Install cert-manager CRDs and cert-manager
+      - name: Install cert-manager
+        run: |
+          kubectl apply -f https://github.com/cert-manager/cert-manager/releases/latest/download/cert-manager.crds.yaml
+          kubectl apply -f https://github.com/cert-manager/cert-manager/releases/latest/download/cert-manager.yaml
+          kubectl wait --for=condition=available --timeout=300s deployment/cert-manager -n cert-manager
+          kubectl wait --for=condition=available --timeout=300s deployment/cert-manager-webhook -n cert-manager
+          kubectl wait --for=condition=available --timeout=300s deployment/cert-manager-cainjector -n cert-manager
+
+      # 6. Apply ClusterIssuer for TLS
+      - name: Apply ClusterIssuer
+        run: |
           kubectl apply -f ClusterIssuer.yaml || true
 
-          echo "Applying Deployment and Service..."
+      # 7. Deploy app: Deployment and Service
+      - name: Deploy app resources
+        run: |
           kubectl apply -f deployment.yaml
           kubectl apply -f service.yaml
 
-          echo "Applying ingress-nginx controller..."
+      # 8. Deploy ingress-nginx controller
+      - name: Deploy ingress-nginx controller
+        run: |
           kubectl apply -f ingress-nginx-controller.yaml --wait
 
-          echo "Applying Ingress with cert-manager annotations..."
+      # 9. Apply Ingress with cert-manager TLS annotations
+      - name: Apply Ingress
+        run: |
           kubectl apply -f ingress.yaml --wait
 
-          echo "Waiting for TLS certificate to be ready..."
+      # 10. Wait for TLS certificate to be ready
+      - name: Wait for TLS
+        run: |
           kubectl wait --for=condition=Ready certificate/wisecow-tls -n wisecow --timeout=300s || true
