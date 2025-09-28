@@ -3,7 +3,7 @@ name: Deploy to AKS
 on:
   push:
     branches:
-      - main
+      - AKS-Cluster
 
 jobs:
   deploy:
