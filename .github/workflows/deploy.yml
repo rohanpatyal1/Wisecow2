@@ -26,24 +26,11 @@ jobs:
           echo "${{ secrets.AKS_KUBECONFIG }}" | base64 --decode > kubeconfig.yaml
           export KUBECONFIG=$(pwd)/kubeconfig.yaml
 
-      # 4️ Create namespaces
-      - name: Create namespaces
+      # 4️ Apply namespaces
+      - name: Apply namespaces
         run: |
-          echo "Creating wisecow namespace..."
-          kubectl apply -f - <<EOF
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: wisecow
-EOF
-
-          echo "Creating ingress-nginx namespace..."
-          kubectl apply -f - <<EOF
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: ingress-nginx
-EOF
+          kubectl apply --kubeconfig=kubeconfig.yaml -f namespace.yaml
+          kubectl apply --kubeconfig=kubeconfig.yaml -f ingress-nginx-namespace.yaml
 
       # 5️ Install cert-manager CRDs
       - name: Install cert-manager CRDs
@@ -53,10 +40,10 @@ EOF
       # 6️ Apply ClusterIssuer for TLS
       - name: Apply ClusterIssuer
         run: |
-          kubectl apply --kubeconfig=kubeconfig.yaml -f ClusterIssuer.yaml || true
+          kubectl apply --kubeconfig=kubeconfig.yaml -f ClusterIssuer.yaml
 
-      # 7️ Deploy your application
-      - name: Apply Deployment and Service
+      # 7️ Apply Deployment and Service
+      - name: Deploy application
         run: |
           kubectl apply --kubeconfig=kubeconfig.yaml -f deployment.yaml
           kubectl apply --kubeconfig=kubeconfig.yaml -f service.yaml
@@ -71,7 +58,7 @@ EOF
         run: |
           kubectl apply --kubeconfig=kubeconfig.yaml -f ingress.yaml --wait
 
-      # 10 Wait for TLS certificate
+      #  Wait for TLS certificate
       - name: Wait for TLS certificate
         run: |
           echo "Waiting for TLS certificate to be ready..."
