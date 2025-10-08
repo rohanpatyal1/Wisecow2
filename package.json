@@ -1,0 +1,25 @@
+{
+  "name": "wisecow",
+  "version": "1.0.0",
+  "description": "## Prerequisites",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Vysh-reddy-boddu/wisecow.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Vysh-reddy-boddu/wisecow/issues"
+  },
+  "homepage": "https://github.com/Vysh-reddy-boddu/wisecow#readme",
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}
+
