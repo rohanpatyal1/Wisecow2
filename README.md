@@ -47,3 +47,4 @@ Deploy the Wisecow application as a Kubernetes application
 - GitHub Actions workflow for CI/CD
 - TLS certificate and key for secure communication
 
+Trigger workflow
