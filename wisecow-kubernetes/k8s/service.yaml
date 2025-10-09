@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: wisecow-service
+spec:
+  type: NodePort           # Exposes service outside the cluster
+  selector:
+    app: wisecow           # Must match the label in deployment.yaml
+  ports:
+    - protocol: TCP
+      port: 80             # Cluster IP port
+      targetPort: 4499     # Container port
+      nodePort: 30080      # Optional: fixed NodePort for external access
+
