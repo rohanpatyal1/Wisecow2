@@ -5,10 +5,8 @@ metadata:
 spec:
   selector:
     app: wisecow
-  type: NodePort
+  type: ClusterIP
   ports:
     - protocol: TCP
-      port: 80       # service port
-      targetPort: 4499 # container port
-      nodePort: 30080  # external access in Minikube/Kind
-
+      port: 4499
+      targetPort: 4499
