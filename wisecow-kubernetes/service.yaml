@@ -7,6 +7,6 @@ spec:
     app: wisecow
   type: ClusterIP
   ports:
-    - protocol: TCP
-      port: 4499
-      targetPort: 4499
+  - protocol: TCP
+    port: 4499
+    targetPort: 4499
