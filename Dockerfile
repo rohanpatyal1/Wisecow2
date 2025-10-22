@@ -1,18 +1,23 @@
-# Dockerfile
-FROM node:18-alpine
+FROM ubuntu:24.04
 
-# Set the working directory
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install runtime dependencies needed by wisecow.sh
+RUN apt-get update \
+	&& apt-get install -y --no-install-recommends \
+		bash \
+		cowsay \
+		fortune-mod \
+		netcat-openbsd \
+	&& rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
-# Copy package files and install dependencies
-COPY package*.json ./
-RUN npm install
+# Copy the wisecow script and make it executable
+COPY wisecow.sh /app/wisecow.sh
+RUN chmod +x /app/wisecow.sh
 
-# Copy the rest of the application
-COPY . .
-
-# Expose port (check app's port, assuming 3000)
 EXPOSE 4499
 
-# Start the application
-CMD ["npm", "start"]
+# Run the shell-based server
+CMD ["/bin/bash", "/app/wisecow.sh"]

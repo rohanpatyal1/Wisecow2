@@ -26,3 +26,48 @@ Deploy the wisecow application as a k8s app
 1. Github repo containing the app with corresponding dockerfile, k8s manifest, any other artifacts needed.
 2. Github repo with corresponding github action.
 3. Github repo should be kept private and the access should be enabled for following github IDs: nyrahul
+
+## Workspace additions in this fork
+
+Files added/updated to help containerize and deploy:
+
+- `Dockerfile` - builds an Ubuntu-based image with cowsay, fortune and nc and runs `wisecow.sh`.
+- `k8s/deployment.yaml` - Deployment using image `ghcr.io/<your-org>/wisecow:latest` (update as needed).
+- `k8s/service.yaml` - ClusterIP Service exposing port 80 -> container 4499.
+- `k8s/ingress.yaml` - Ingress template with TLS placeholder (replace secret or use cert-manager).
+- `k8s/kubearmor-policy.yaml` - Optional KubeArmor deny-all template (adjust to allow required binaries).
+- `.github/workflows/ci-cd.yml` - GitHub Actions workflow to build and push image to GHCR and optionally deploy to a cluster if `KUBE_CONFIG_DATA` secret is set.
+- `scripts/system_health_monitor.sh` - Simple system health monitor (bash).
+- `scripts/app_health_check.py` - HTTP-based application health checker (Python, requires `requests`).
+
+## Quick local test (Docker)
+
+Build:
+
+```bash
+docker build -t wisecow:local .
+```
+
+Run:
+
+```bash
+docker run --rm -p 4499:4499 wisecow:local
+```
+
+Visit http://localhost:4499
+
+## Deploy to Kubernetes (example using kubectl with current kubeconfig)
+
+Apply manifests:
+
+```bash
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+# If you have an ingress controller and TLS secret, apply ingress
+kubectl apply -f k8s/ingress.yaml
+```
+
+Notes:
+- Update the image name in `k8s/deployment.yaml` to your registry/org (the workflow pushes to `ghcr.io/<owner>/wisecow:latest`).
+- For CI/CD deploy, set `KUBE_CONFIG_DATA` secret in the repository to a base64-encoded kubeconfig.
+

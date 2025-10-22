@@ -1,0 +1,20 @@
+{
+  "name": "wisecow",
+  "version": "1.0.0",
+  "description": "Shell-based cowsay + fortune web server",
+  "scripts": {
+    "start": "bash ./wisecow.sh",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rohanpatyal1/Wisecow2.git"
+  },
+  "keywords": ["cowsay", "fortune", "shell"],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/rohanpatyal1/Wisecow2/issues"
+  },
+  "homepage": "https://github.com/rohanpatyal1/Wisecow2#readme"
+}

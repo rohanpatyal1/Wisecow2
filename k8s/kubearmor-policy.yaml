@@ -1,0 +1,23 @@
+apiVersion: security.kubearmor.com/v1
+kind: KubeArmorPolicy
+metadata:
+  name: wisecow-deny-all
+spec:
+  severity: 5
+  selector:
+    matchLabels:
+      app: wisecow
+  file:
+    matchPaths:
+      - path: "/"
+        matchType: Prefix
+        action: Block
+  capabilities:
+    - matchPaths: []
+  network:
+    - action: Block
+      matchProtocols:
+        - tcp
+        - udp
+
+  # This is a strict deny-all template. Adjust allow rules as needed for permitted binaries (nc, bash, cowsay).
